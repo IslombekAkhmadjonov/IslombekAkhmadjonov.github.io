@@ -10,36 +10,79 @@
             height: 100vh;
             margin: 0;
             background-color: #000;
-            color: #fff;
             font-family: Arial, sans-serif;
         }
         #timer {
             font-size: 10vw;
         }
+        .work {
+            color: red;
+        }
+        .rest {
+            color: green;
+        }
     </style>
 </head>
 <body>
-    <h1 id="timer">00:00</h1>
+    <h1 id="timer"></h1>
 
     <script>
         function startTimer() {
-            var now = new Date();
-            var minutes = now.getMinutes();
-            var seconds = now.getSeconds();
-            var timeLeft = 300 - ((minutes % 5) * 60 + seconds);
-            var countdown = setInterval(function() {
-                timeLeft--;
-                var minutesLeft = Math.floor(timeLeft / 60);
-                var secondsLeft = timeLeft % 60;
-                document.getElementById('timer').textContent = 
-                    (minutesLeft < 10 ? '0' : '') + minutesLeft + ':' + 
-                    (secondsLeft < 10 ? '0' : '') + secondsLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(countdown);
-                    startTimer();
-                }
-            }, 1000);
+            fetchGlobalTime()
+                .then(globalTime => {
+                    var currentMinutes = globalTime.getUTCMinutes();
+                    var currentSeconds = globalTime.getUTCSeconds();
+                    var workTimeLeft;
+                    var restTimeLeft;
+                    var mode;
+
+                    if (currentMinutes % 30 < 25) {
+                        workTimeLeft = (25 - (currentMinutes % 30)) * 60 - currentSeconds;
+                        mode = 'work';
+                    } else {
+                        workTimeLeft = (30 - (currentMinutes % 30)) * 60 - currentSeconds;
+                        restTimeLeft = 5 * 60 - currentSeconds;
+                        mode = 'rest';
+                    }
+
+                    var countdown = setInterval(function() {
+                        if (mode === 'work') {
+                            workTimeLeft--;
+                            updateTime(workTimeLeft, 'work');
+
+                            if (workTimeLeft <= 0) {
+                                clearInterval(countdown);
+                                startTimer();
+                            }
+                        } else {
+                            restTimeLeft--;
+                            updateTime(restTimeLeft, 'rest');
+
+                            if (restTimeLeft <= 0) {
+                                clearInterval(countdown);
+                                startTimer();
+                            }
+                        }
+                    }, 1000);
+                });
         }
+
+        function updateTime(timeLeft, mode) {
+            var minutesLeft = Math.floor(timeLeft / 60);
+            var secondsLeft = timeLeft % 60;
+            var timerElement = document.getElementById('timer');
+            timerElement.textContent = 
+                (minutesLeft < 10 ? '0' : '') + minutesLeft + ':' + 
+                (secondsLeft < 10 ? '0' : '') + secondsLeft;
+            timerElement.className = mode;
+        }
+
+        function fetchGlobalTime() {
+            return fetch('https://worldtimeapi.org/api/ip')
+                .then(response => response.json())
+                .then(data => new Date(data.utc_datetime));
+        }
+
         startTimer();
     </script>
 </body>
